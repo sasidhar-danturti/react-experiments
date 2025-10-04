@@ -12,6 +12,9 @@ interface DocumentManagerProps {
 export function DocumentManager({ documents, onUpload, onDownload, isUploading }: DocumentManagerProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const summary = documents.length
+    ? `${documents.length} uploaded file${documents.length === 1 ? '' : 's'} ready for reference.`
+    : 'Upload supporting material for the ingestion agent.';
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -32,8 +35,8 @@ export function DocumentManager({ documents, onUpload, onDownload, isUploading }
     <section className="document-manager">
       <header className="document-manager__header">
         <div>
-          <h2>Evidence Library</h2>
-          <p>Upload supporting documents to feed the Databricks ingestion agent.</p>
+          <h2>Evidence</h2>
+          <p>{summary}</p>
         </div>
         <button
           type="button"
