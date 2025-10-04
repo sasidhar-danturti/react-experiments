@@ -1,18 +1,34 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChatPanel } from './components/ChatPanel';
+import { DocumentManager } from './components/DocumentManager';
+import { LoginPanel } from './components/LoginPanel';
 import { ReportPanel } from './components/ReportPanel';
-import { SessionSidebar } from './components/SessionSidebar';
+import { TaskSidebar } from './components/TaskSidebar';
 import {
-  createSession,
-  deleteSession,
-  fetchSession,
-  fetchSessions,
+  createTask,
+  deleteTask,
+  downloadDocument,
+  downloadReportPdf,
+  fetchTask,
+  fetchTasks,
   invokeAgent,
+  listDocuments,
+  login,
   persistReport,
-  renameSession
+  renameTask,
+  uploadDocument
 } from './lib/api';
-import type { ReportArtifact, SessionDetail, SessionSummary } from './types';
+import type {
+  DocumentRecord,
+  ReportArtifact,
+  TaskDetail,
+  TaskSummary,
+  UserProfile
+} from './types';
 import './App.css';
+
+const TOKEN_KEY = 'databricks-workspace-token';
+const USER_KEY = 'databricks-workspace-user';
 
 function downloadMarkdown(report: ReportArtifact) {
   const sections = report.sections
@@ -36,167 +52,312 @@ function downloadMarkdown(report: ReportArtifact) {
   URL.revokeObjectURL(url);
 }
 
-function useSessionsManager() {
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [activeSession, setActiveSession] = useState<SessionDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+function useWorkspace(token: string | null) {
+  const [tasks, setTasks] = useState<TaskSummary[]>([]);
+  const [activeTask, setActiveTask] = useState<TaskDetail | null>(null);
+  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
+  const [isThinking, setIsThinking] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [insights, setInsights] = useState<string[]>([]);
 
-  const loadSessions = useCallback(async () => {
-    const list = await fetchSessions();
-    setSessions(list);
-  }, []);
+  const refreshDocuments = useCallback(async () => {
+    if (!token) return;
+    const list = await listDocuments(token);
+    setDocuments(list);
+  }, [token]);
 
-  const selectSession = useCallback(async (id: string) => {
-    setIsLoading(true);
-    try {
-      const session = await fetchSession(id);
-      setActiveSession(session);
-    } finally {
-      setIsLoading(false);
+  const loadTasks = useCallback(async () => {
+    if (!token) {
+      setTasks([]);
+      return;
     }
-  }, []);
+    const list = await fetchTasks(token);
+    setTasks(list);
+  }, [token]);
 
-  const createNewSession = useCallback(async (title: string) => {
-    setIsLoading(true);
-    try {
-      const session = await createSession(title);
-      await loadSessions();
-      setActiveSession(session);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [loadSessions]);
-
-  const updateSessionTitle = useCallback(
-    async (id: string, title: string) => {
-      await renameSession(id, title);
-      await loadSessions();
-      if (activeSession?.id === id) {
-        setActiveSession({ ...activeSession, title });
+  const selectTask = useCallback(
+    async (id: string) => {
+      if (!token) return;
+      setIsThinking(true);
+      try {
+        const detail = await fetchTask(token, id);
+        setActiveTask(detail);
+        setInsights([]);
+      } finally {
+        setIsThinking(false);
       }
     },
-    [activeSession, loadSessions]
+    [token]
   );
 
-  const removeSession = useCallback(
-    async (id: string) => {
-      await deleteSession(id);
-      await loadSessions();
-      if (activeSession?.id === id) {
-        setActiveSession(null);
+  const createNewTask = useCallback(
+    async (title: string) => {
+      if (!token) return;
+      setIsThinking(true);
+      try {
+        const created = await createTask(token, title);
+        await loadTasks();
+        setActiveTask(created);
+      } finally {
+        setIsThinking(false);
       }
     },
-    [activeSession, loadSessions]
+    [token, loadTasks]
+  );
+
+  const updateTaskTitle = useCallback(
+    async (id: string, title: string) => {
+      if (!token) return;
+      await renameTask(token, id, title);
+      await loadTasks();
+      setActiveTask((current) => (current && current.id === id ? { ...current, title } : current));
+    },
+    [token, loadTasks]
+  );
+
+  const removeTask = useCallback(
+    async (id: string) => {
+      if (!token) return;
+      await deleteTask(token, id);
+      await loadTasks();
+      const wasActive = activeTask?.id === id;
+      setActiveTask((current) => (current && current.id === id ? null : current));
+      if (wasActive) {
+        setInsights([]);
+      }
+    },
+    [token, loadTasks, activeTask]
   );
 
   const sendMessage = useCallback(
     async (prompt: string) => {
-      if (!activeSession) return;
-      setIsLoading(true);
+      if (!token || !activeTask) return;
+      setIsThinking(true);
       try {
-        const response = await invokeAgent(activeSession.id, { prompt });
+        const response = await invokeAgent(token, activeTask.id, { prompt });
         setInsights(response.insights);
-        const refreshed = await fetchSession(activeSession.id);
-        setActiveSession(refreshed);
-        await loadSessions();
+        const refreshed = await fetchTask(token, activeTask.id);
+        setActiveTask(refreshed);
+        await loadTasks();
+        await refreshDocuments();
       } finally {
-        setIsLoading(false);
+        setIsThinking(false);
       }
     },
-    [activeSession, loadSessions]
+    [token, activeTask, loadTasks, refreshDocuments]
   );
 
   const saveReport = useCallback(
     async (report: ReportArtifact) => {
-      if (!activeSession) return;
-      await persistReport(activeSession.id, report);
-      const refreshed = await fetchSession(activeSession.id);
-      setActiveSession(refreshed);
-      await loadSessions();
+      if (!token || !activeTask) return;
+      await persistReport(token, activeTask.id, report);
+      const refreshed = await fetchTask(token, activeTask.id);
+      setActiveTask(refreshed);
+      await loadTasks();
     },
-    [activeSession, loadSessions]
+    [token, activeTask, loadTasks]
   );
 
+  const downloadActiveReportPdf = useCallback(async () => {
+    if (!token || !activeTask) return;
+    const blob = await downloadReportPdf(token, activeTask.id);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${activeTask.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-report.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [token, activeTask]);
+
+  const uploadEvidence = useCallback(
+    async (file: File) => {
+      if (!token) return;
+      setIsUploading(true);
+      try {
+        await uploadDocument(token, file);
+        await refreshDocuments();
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [token, refreshDocuments]
+  );
+
+  const downloadEvidence = useCallback(
+    async (doc: DocumentRecord) => {
+      if (!token) return;
+      const blob = await downloadDocument(token, doc.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.originalName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    },
+    [token]
+  );
+
+  useEffect(() => {
+    if (!token) {
+      setTasks([]);
+      setActiveTask(null);
+      setDocuments([]);
+      setInsights([]);
+      return;
+    }
+    loadTasks().catch(() => undefined);
+    refreshDocuments().catch(() => undefined);
+    const interval = setInterval(() => {
+      refreshDocuments().catch(() => undefined);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [token, loadTasks, refreshDocuments]);
+
   return {
-    sessions,
-    activeSession,
-    isLoading,
+    tasks,
+    activeTask,
+    documents,
+    isThinking,
+    isUploading,
     insights,
-    loadSessions,
-    selectSession,
-    createNewSession,
-    updateSessionTitle,
-    removeSession,
+    selectTask,
+    createNewTask,
+    updateTaskTitle,
+    removeTask,
     sendMessage,
-    saveReport
+    saveReport,
+    downloadActiveReportPdf,
+    uploadEvidence,
+    downloadEvidence,
+    refreshDocuments
   };
 }
 
 function EmptyState() {
   return (
     <div className="app__empty">
-      <h2>Select or create a session</h2>
+      <h2>Select or create a task</h2>
       <p>
-        Each workspace keeps the full conversation, agentic reasoning, and the evolving report so your
-        team can revisit insights later.
+        Each task keeps the authenticated conversation, ingestion results, and the evolving report so your team can
+        revisit insights later.
       </p>
     </div>
   );
 }
 
 function App() {
-  const {
-    sessions,
-    activeSession,
-    isLoading,
-    insights,
-    loadSessions,
-    selectSession,
-    createNewSession,
-    updateSessionTitle,
-    removeSession,
-    sendMessage
-  } = useSessionsManager();
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    const stored = localStorage.getItem(USER_KEY);
+    return stored ? (JSON.parse(stored) as UserProfile) : null;
+  });
+  const [authenticating, setAuthenticating] = useState(false);
 
-  useEffect(() => {
-    loadSessions();
-  }, [loadSessions]);
+  const workspace = useWorkspace(token);
 
-  const layoutClass = useMemo(() => (activeSession ? 'app__main' : 'app__main app__main--empty'), [activeSession]);
+  const handleLogin = useCallback(
+    async (email: string, password: string, name?: string) => {
+      setAuthenticating(true);
+      try {
+        const response = await login(email, password, name);
+        setToken(response.token);
+        setUser(response.user);
+        localStorage.setItem(TOKEN_KEY, response.token);
+        localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+      } finally {
+        setAuthenticating(false);
+      }
+    },
+    []
+  );
+
+  const handleLogout = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  }, []);
+
+  const layoutClass = useMemo(
+    () => (workspace.activeTask ? 'app__main' : 'app__main app__main--empty'),
+    [workspace.activeTask]
+  );
+
+  if (!token || !user) {
+    return <LoginPanel onLogin={handleLogin} isLoading={authenticating} />;
+  }
 
   return (
     <div className="app">
-      <SessionSidebar
-        sessions={sessions}
-        activeSessionId={activeSession?.id}
-        onSelect={selectSession}
-        onCreate={createNewSession}
-        onRename={updateSessionTitle}
-        onDelete={removeSession}
+      <TaskSidebar
+        tasks={workspace.tasks}
+        activeTaskId={workspace.activeTask?.id}
+        onSelect={workspace.selectTask}
+        onCreate={workspace.createNewTask}
+        onRename={workspace.updateTaskTitle}
+        onDelete={workspace.removeTask}
       />
 
       <main className={layoutClass}>
-        {activeSession ? (
+        {workspace.activeTask ? (
           <>
-            <section className="app__column">
-              <div className="app__session-header">
+            <section className="app__column app__column--chat">
+              <div className="app__task-header">
                 <div>
-                  <h2>{activeSession.title}</h2>
-                  <p>Session created {new Date(activeSession.createdAt).toLocaleString()}</p>
+                  <h2>{workspace.activeTask.title}</h2>
+                  <p>
+                    Task created {new Date(workspace.activeTask.createdAt).toLocaleString()} — signed in as {user.name}{' '}
+                    ({user.email})
+                  </p>
                 </div>
-                <span className={`app__status ${isLoading ? 'app__status--thinking' : 'app__status--idle'}`}>
-                  {isLoading ? 'Agent thinking' : 'Ready'}
-                </span>
+                <div className="app__header-actions">
+                  <span className={`app__status ${workspace.isThinking ? 'app__status--thinking' : 'app__status--idle'}`}>
+                    {workspace.isThinking ? 'Agent thinking' : 'Ready'}
+                  </span>
+                  <button type="button" className="app__logout" onClick={handleLogout}>
+                    Sign out
+                  </button>
+                </div>
               </div>
-              <ChatPanel messages={activeSession.messages} onSend={sendMessage} disabled={isLoading} insights={insights} />
+              <ChatPanel
+                messages={workspace.activeTask.messages}
+                onSend={workspace.sendMessage}
+                disabled={workspace.isThinking}
+                insights={workspace.insights}
+              />
             </section>
-            <section className="app__column app__column--report">
-              <ReportPanel report={activeSession.report} disabled={isLoading} onDownload={downloadMarkdown} />
+            <section className="app__column app__column--right">
+              <DocumentManager
+                documents={workspace.documents}
+                onUpload={workspace.uploadEvidence}
+                onDownload={workspace.downloadEvidence}
+                isUploading={workspace.isUploading}
+              />
+              <ReportPanel
+                report={workspace.activeTask.report}
+                disabled={workspace.isThinking}
+                onDownloadMarkdown={downloadMarkdown}
+                onDownloadPdf={() => void workspace.downloadActiveReportPdf()}
+              />
             </section>
           </>
         ) : (
-          <EmptyState />
+          <div className="app__welcome">
+            <header className="app__welcome-header">
+              <div>
+                <h2>Welcome back, {user.name}</h2>
+                <p>Launch a new intelligence task or pick up where you left off.</p>
+              </div>
+              <button type="button" className="app__logout" onClick={handleLogout}>
+                Sign out
+              </button>
+            </header>
+            <EmptyState />
+          </div>
         )}
       </main>
     </div>

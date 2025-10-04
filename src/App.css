@@ -7,7 +7,7 @@
 .app__main {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
   gap: 24px;
   padding: 32px;
 }
@@ -25,11 +25,15 @@
   gap: 18px;
 }
 
-.app__column--report {
+.app__column--chat {
   min-height: 0;
 }
 
-.app__session-header {
+.app__column--right {
+  min-height: 0;
+}
+
+.app__task-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -39,11 +43,11 @@
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.1);
 }
 
-.app__session-header h2 {
+.app__task-header h2 {
   margin: 0;
 }
 
-.app__session-header p {
+.app__task-header p {
   margin: 4px 0 0;
   color: #475569;
   font-size: 0.9rem;
@@ -53,6 +57,21 @@
   font-weight: 600;
   padding: 8px 16px;
   border-radius: 999px;
+}
+
+.app__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app__logout {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  padding: 8px 16px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #f8fafc;
+  cursor: pointer;
 }
 
 .app__status--thinking {
@@ -72,6 +91,32 @@
   max-width: 560px;
   text-align: center;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+}
+
+.app__welcome {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.app__welcome-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 18px 22px;
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.1);
+}
+
+.app__welcome-header h2 {
+  margin: 0;
+}
+
+.app__welcome-header p {
+  margin: 4px 0 0;
+  color: #475569;
+  font-size: 0.95rem;
 }
 
 @media (max-width: 1280px) {

@@ -47,8 +47,8 @@ export function ChatPanel({ messages, disabled, onSend, insights = [] }: ChatPan
           <div className="chat-panel__empty">
             <h2>Start collaborating with the Databricks proxy agent</h2>
             <p>
-              Ask strategic questions, request visualisations, and iterate on high-impact reports.
-              Each turn updates the report on the right.
+              Upload evidence to the right, then ask strategic questions, request visuals, and iterate on
+              high-impact reports. Each turn updates the intelligence deliverable.
             </p>
           </div>
         ) : (

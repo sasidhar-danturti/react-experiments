@@ -1,0 +1,119 @@
+.document-manager {
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.18);
+}
+
+.document-manager__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.document-manager__header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.document-manager__header p {
+  margin: 6px 0 0;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.document-manager__upload {
+  background: #38bdf8;
+  color: #0f172a;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 10px 16px;
+  border: none;
+  cursor: pointer;
+}
+
+.document-manager__input {
+  display: none;
+}
+
+.document-manager__error {
+  margin: 0;
+  color: #f87171;
+  font-weight: 600;
+}
+
+.document-manager__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.document-manager__item {
+  background: rgba(30, 41, 59, 0.85);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.document-manager__meta h3 {
+  margin: 0;
+}
+
+.document-manager__meta p {
+  margin: 4px 0;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.document-manager__notes {
+  font-style: italic;
+}
+
+.document-manager__actions button {
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.6);
+  color: inherit;
+  cursor: pointer;
+}
+
+.document-manager__actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.document-manager__status {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.document-manager__status--processed {
+  color: #4ade80;
+}
+
+.document-manager__status--processing {
+  color: #facc15;
+}
+
+.document-manager__status--failed {
+  color: #f87171;
+}
+
+.document-manager__empty {
+  text-align: center;
+  padding: 24px;
+  border: 2px dashed rgba(148, 163, 184, 0.4);
+  border-radius: 16px;
+  color: rgba(226, 232, 240, 0.7);
+}

@@ -5,10 +5,11 @@ import './ReportPanel.css';
 interface ReportPanelProps {
   report: ReportArtifact | null;
   disabled?: boolean;
-  onDownload?: (report: ReportArtifact) => void;
+  onDownloadMarkdown?: (report: ReportArtifact) => void;
+  onDownloadPdf?: (report: ReportArtifact) => void;
 }
 
-export function ReportPanel({ report, disabled, onDownload }: ReportPanelProps) {
+export function ReportPanel({ report, disabled, onDownloadMarkdown, onDownloadPdf }: ReportPanelProps) {
   const preparedSections = useMemo(() => report?.sections ?? [], [report]);
 
   if (!report) {
@@ -27,14 +28,24 @@ export function ReportPanel({ report, disabled, onDownload }: ReportPanelProps) 
           <h2>{report.title}</h2>
           <p className="report-panel__timestamp">Last updated {new Date(report.lastUpdated).toLocaleString()}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => report && onDownload?.(report)}
-          disabled={disabled}
-          className="report-panel__download"
-        >
-          Download Markdown
-        </button>
+        <div className="report-panel__actions">
+          <button
+            type="button"
+            onClick={() => report && onDownloadMarkdown?.(report)}
+            disabled={disabled}
+            className="report-panel__download"
+          >
+            Markdown
+          </button>
+          <button
+            type="button"
+            onClick={() => report && onDownloadPdf && onDownloadPdf(report)}
+            disabled={disabled}
+            className="report-panel__download"
+          >
+            PDF
+          </button>
+        </div>
       </header>
 
       <article className="report-panel__body">

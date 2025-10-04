@@ -1,9 +1,11 @@
 import type {
+  AuthResponse,
+  DocumentRecord,
   InvokeAgentRequest,
   InvokeAgentResponse,
-  SessionDetail,
-  SessionSummary,
-  ReportArtifact
+  ReportArtifact,
+  TaskDetail,
+  TaskSummary
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
@@ -16,64 +18,127 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function fetchSessions(): Promise<SessionSummary[]> {
-  const res = await fetch(`${API_BASE}/sessions`);
-  return handleResponse<SessionSummary[]>(res);
+function withAuth(token: string, extra: Record<string, string> = {}) {
+  return {
+    'x-user-id': token,
+    ...extra
+  } satisfies Record<string, string>;
 }
 
-export async function createSession(title: string): Promise<SessionDetail> {
-  const res = await fetch(`${API_BASE}/sessions`, {
+export async function login(email: string, password: string, name?: string): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, name })
+  });
+  return handleResponse<AuthResponse>(res);
+}
+
+export async function fetchTasks(token: string): Promise<TaskSummary[]> {
+  const res = await fetch(`${API_BASE}/tasks`, {
+    headers: withAuth(token)
+  });
+  return handleResponse<TaskSummary[]>(res);
+}
+
+export async function createTask(token: string, title: string): Promise<TaskDetail> {
+  const res = await fetch(`${API_BASE}/tasks`, {
+    method: 'POST',
+    headers: withAuth(token, { 'Content-Type': 'application/json' }),
     body: JSON.stringify({ title })
   });
-  return handleResponse<SessionDetail>(res);
+  return handleResponse<TaskDetail>(res);
 }
 
-export async function fetchSession(id: string): Promise<SessionDetail> {
-  const res = await fetch(`${API_BASE}/sessions/${id}`);
-  return handleResponse<SessionDetail>(res);
+export async function fetchTask(token: string, id: string): Promise<TaskDetail> {
+  const res = await fetch(`${API_BASE}/tasks/${id}`, {
+    headers: withAuth(token)
+  });
+  return handleResponse<TaskDetail>(res);
 }
 
-export async function renameSession(id: string, title: string): Promise<SessionSummary> {
-  const res = await fetch(`${API_BASE}/sessions/${id}`, {
+export async function renameTask(token: string, id: string, title: string): Promise<TaskSummary> {
+  const res = await fetch(`${API_BASE}/tasks/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: withAuth(token, { 'Content-Type': 'application/json' }),
     body: JSON.stringify({ title })
   });
-  return handleResponse<SessionSummary>(res);
+  return handleResponse<TaskSummary>(res);
 }
 
-export async function deleteSession(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/sessions/${id}`, {
-    method: 'DELETE'
+export async function deleteTask(token: string, id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/tasks/${id}`, {
+    method: 'DELETE',
+    headers: withAuth(token)
   });
   if (!res.ok) {
     const message = await res.text();
-    throw new Error(message || 'Failed to delete session');
+    throw new Error(message || 'Failed to delete task');
   }
 }
 
 export async function invokeAgent(
+  token: string,
   id: string,
   payload: InvokeAgentRequest
 ): Promise<InvokeAgentResponse> {
-  const res = await fetch(`${API_BASE}/sessions/${id}/invoke`, {
+  const res = await fetch(`${API_BASE}/tasks/${id}/invoke`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: withAuth(token, { 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
   return handleResponse<InvokeAgentResponse>(res);
 }
 
 export async function persistReport(
+  token: string,
   id: string,
   report: ReportArtifact
 ): Promise<ReportArtifact> {
-  const res = await fetch(`${API_BASE}/sessions/${id}/report`, {
+  const res = await fetch(`${API_BASE}/tasks/${id}/report`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: withAuth(token, { 'Content-Type': 'application/json' }),
     body: JSON.stringify(report)
   });
   return handleResponse<ReportArtifact>(res);
+}
+
+export async function downloadReportPdf(token: string, id: string): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/tasks/${id}/report/pdf`, {
+    headers: withAuth(token)
+  });
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(message || 'Failed to download report');
+  }
+  return res.blob();
+}
+
+export async function listDocuments(token: string): Promise<DocumentRecord[]> {
+  const res = await fetch(`${API_BASE}/documents`, {
+    headers: withAuth(token)
+  });
+  return handleResponse<DocumentRecord[]>(res);
+}
+
+export async function uploadDocument(token: string, file: File): Promise<DocumentRecord> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/documents`, {
+    method: 'POST',
+    headers: withAuth(token),
+    body: formData
+  });
+  return handleResponse<DocumentRecord>(res);
+}
+
+export async function downloadDocument(token: string, id: string): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/documents/${id}/download`, {
+    headers: withAuth(token)
+  });
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(message || 'Failed to download document');
+  }
+  return res.blob();
 }
