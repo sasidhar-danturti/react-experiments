@@ -1,4 +1,4 @@
-import { ChangeEvent, useRef, useState } from 'react';
+import { ChangeEvent, useId, useRef, useState } from 'react';
 import type { DocumentRecord } from '../types';
 import './DocumentManager.css';
 
@@ -12,6 +12,8 @@ interface DocumentManagerProps {
 export function DocumentManager({ documents, onUpload, onDownload, isUploading }: DocumentManagerProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(true);
+  const contentId = useId();
   const summary = documents.length
     ? `${documents.length} uploaded file${documents.length === 1 ? '' : 's'} ready for reference.`
     : 'Upload supporting material for the ingestion agent.';
@@ -32,12 +34,21 @@ export function DocumentManager({ documents, onUpload, onDownload, isUploading }
   };
 
   return (
-    <section className="document-manager">
+    <section className={`document-manager ${isExpanded ? 'document-manager--expanded' : 'document-manager--collapsed'}`}>
       <header className="document-manager__header">
-        <div>
-          <h2>Evidence</h2>
-          <p>{summary}</p>
-        </div>
+        <button
+          type="button"
+          className="document-manager__toggle"
+          aria-expanded={isExpanded}
+          aria-controls={contentId}
+          onClick={() => setIsExpanded((value) => !value)}
+        >
+          <span className="document-manager__chevron" aria-hidden />
+          <div className="document-manager__summary">
+            <h2>Evidence</h2>
+            <p>{summary}</p>
+          </div>
+        </button>
         <button
           type="button"
           className="document-manager__upload"
@@ -55,33 +66,35 @@ export function DocumentManager({ documents, onUpload, onDownload, isUploading }
         />
       </header>
 
-      {error && <p className="document-manager__error">{error}</p>}
+      <div id={contentId} className="document-manager__content" hidden={!isExpanded}>
+        {error && <p className="document-manager__error">{error}</p>}
 
-      <ul className="document-manager__list">
-        {documents.length === 0 ? (
-          <li className="document-manager__empty">No documents uploaded yet.</li>
-        ) : (
-          documents.map((doc) => (
-            <li key={doc.id} className="document-manager__item">
-              <div className="document-manager__meta">
-                <h3>{doc.originalName}</h3>
-                <p>
-                  Uploaded {new Date(doc.uploadedAt).toLocaleString()} — {(doc.size / 1024).toFixed(1)} KB
-                </p>
-                <p className={`document-manager__status document-manager__status--${doc.status}`}>
-                  {doc.status === 'processing' ? 'Processing' : doc.status === 'processed' ? 'Processed' : 'Failed'}
-                </p>
-                {doc.notes && <p className="document-manager__notes">{doc.notes}</p>}
-              </div>
-              <div className="document-manager__actions">
-                <button type="button" onClick={() => void onDownload(doc)} disabled={doc.status !== 'processed'}>
-                  Download
-                </button>
-              </div>
-            </li>
-          ))
-        )}
-      </ul>
+        <ul className="document-manager__list">
+          {documents.length === 0 ? (
+            <li className="document-manager__empty">No documents uploaded yet.</li>
+          ) : (
+            documents.map((doc) => (
+              <li key={doc.id} className="document-manager__item">
+                <div className="document-manager__meta">
+                  <h3>{doc.originalName}</h3>
+                  <p>
+                    Uploaded {new Date(doc.uploadedAt).toLocaleString()} — {(doc.size / 1024).toFixed(1)} KB
+                  </p>
+                  <p className={`document-manager__status document-manager__status--${doc.status}`}>
+                    {doc.status === 'processing' ? 'Processing' : doc.status === 'processed' ? 'Processed' : 'Failed'}
+                  </p>
+                  {doc.notes && <p className="document-manager__notes">{doc.notes}</p>}
+                </div>
+                <div className="document-manager__actions">
+                  <button type="button" onClick={() => void onDownload(doc)} disabled={doc.status !== 'processed'}>
+                    Download
+                  </button>
+                </div>
+              </li>
+            ))
+          )}
+        </ul>
+      </div>
     </section>
   );
 }
