@@ -1,0 +1,127 @@
+.sidebar {
+  width: 320px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 20px;
+  gap: 24px;
+  border-right: 1px solid rgba(148, 163, 184, 0.3);
+  overflow-y: auto;
+}
+
+.sidebar__header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.sidebar__helper {
+  margin: 8px 0 16px;
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.sidebar__create {
+  display: flex;
+  gap: 8px;
+}
+
+.sidebar__create input {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.6);
+  color: inherit;
+}
+
+.sidebar__create button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #38bdf8;
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sidebar__create button:hover {
+  background: #0ea5e9;
+}
+
+.sidebar__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebar__item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.9);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.sidebar__item--active {
+  border: 1px solid #38bdf8;
+  box-shadow: 0 8px 18px rgba(14, 165, 233, 0.3);
+}
+
+.sidebar__item:hover {
+  transform: translateY(-2px);
+}
+
+.sidebar__item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar__item-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.sidebar__item-updated {
+  font-size: 0.75rem;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.sidebar__item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sidebar__item-actions button {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 0;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.sidebar__item-actions button:first-of-type {
+  background: rgba(148, 163, 184, 0.15);
+  color: inherit;
+}
+
+.sidebar__item-actions button:last-of-type {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+.sidebar__empty {
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 260px;
+  }
+}
