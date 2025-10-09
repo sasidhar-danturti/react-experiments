@@ -1,0 +1,7 @@
+fastapi>=0.111
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0
+langchain-core>=0.2
+langgraph>=0.1
+langchain-openai>=0.1  # optional, replace with your provider's package
+pydantic>=2.7
