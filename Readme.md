@@ -27,7 +27,52 @@ This experiment showcases a React + Vite front-end that collaborates with a ligh
    - Front-end: http://localhost:5173
    - Proxy API: http://localhost:4000/api
 
-3. **Production build**
+3. **(Optional) Start the Python LangGraph web service**
+
+   A FastAPI-based service that mimics the Databricks LangGraph agent is
+   available under `python_service/agent_service.py`.
+
+   **Local quickstart (uses the built-in in-memory SQLite warehouse):**
+
+   ```bash
+   # 1) Install Python dependencies (FastAPI, Uvicorn, SQLAlchemy, LangChain, LangGraph, etc.)
+   pip install -r python_service/requirements.txt  # adjust the list as needed
+
+   # 2) Provide an LLM implementation inside make_llm()
+   #    (e.g., return ChatOpenAI(model="gpt-4o-mini", temperature=0.1))
+
+   # 3) Launch the API (no SQL_WAREHOUSE_URL required)
+   uvicorn python_service.agent_service:app --reload --port 8001
+   ```
+
+   The default configuration keeps data in an in-memory SQLite database so the
+   service boots without any additional infrastructure. When you are ready to
+   target a real warehouse, set ``SQL_WAREHOUSE_URL`` to any SQLAlchemy
+   connection string (Databricks, Snowflake, PostgreSQL, etc.) and optionally
+   ``SQL_DEFAULT_CATALOG`` / ``SQL_DEFAULT_SCHEMA`` to control default
+   namespacing.
+
+   **Hosting for testing:**
+
+   - Add your LLM credentials as environment variables and update
+     `make_llm()` accordingly.
+   - Start the service with a production-ready server, for example:
+
+     ```bash
+     uvicorn python_service.agent_service:app --host 0.0.0.0 --port 8001 --workers 2
+     ```
+
+   - Deploy the container to your preferred platform (Render, Railway,
+     Fly.io, Azure Container Apps, etc.). Mount any configuration as
+     environment variables and, if you need persistence, point
+     ``SQL_WAREHOUSE_URL`` to a managed database instance instead of the
+     default in-memory SQLite store.
+
+   The service exposes `/chat` for agent interactions and `/health` for health
+   checks. Because it relies on generic SQLAlchemy connections it works with
+   any SQL warehouse that exposes the required metadata tables.
+
+4. **Production build**
 
    ```bash
    npm run build
